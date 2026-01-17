@@ -114,7 +114,7 @@ class VisualizationMethods:
         if channel_idx < len(data):
             channel_data = data[channel_idx]
             time_axis = np.arange(len(channel_data)) / self.sampling_rate
-            ax.plot(time_axis, channel_data, 'b-', linewidth=0.8)
+            ax.plot(time_axis, channel_data, color="#22c55e", linewidth=1.2, alpha=0.95)
             ax.set_xlabel('Время (с)')
             ax.set_ylabel('Амплитуда (мкВ)')
             t = f'{title} - {self.channel_names[channel_idx] if channel_idx < len(self.channel_names) else f"Канал {channel_idx}"}'

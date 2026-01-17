@@ -27,7 +27,7 @@ class EEGVisualizer:
 
             for i in range(n_channels):
                 ax = fig.add_subplot(gs[i, 0])
-                ax.plot(time, data[i], 'b', linewidth=0.5)
+                ax.plot(time, data[i], 'g', linewidth=0.5)
                 ax.set_ylabel(f'{channel_names[i]}\n(мкВ)', rotation=0, ha='right')
                 ax.grid(True, alpha=0.3)
 

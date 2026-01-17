@@ -33,7 +33,7 @@ class RealtimeEEGPlot(FigureCanvas):
 
         # Линия для единственного канала
         self.line = None
-        self.line_color = '#00ff00'
+        self.line_color = '#22c55e'
 
         # Обновление каждые 50мс
         self.update_interval = 50
