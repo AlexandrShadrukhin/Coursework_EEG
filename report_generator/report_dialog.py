@@ -36,11 +36,11 @@ class ReportConfigDialog(QDialog):
         layout.addWidget(title_label)
         
         # Информация о пациенте
-        patient_group = QGroupBox("Информация о пациенте")
+        patient_group = QGroupBox("Информация о пользователе")
         patient_layout = QFormLayout()
         
         self.patient_name_edit = QLineEdit()
-        patient_layout.addRow("ФИО пациента:", self.patient_name_edit)
+        patient_layout.addRow("ФИО пользователя:", self.patient_name_edit)
         
         self.patient_age_spin = QSpinBox()
         self.patient_age_spin.setRange(0, 120)
@@ -106,7 +106,7 @@ class ReportConfigDialog(QDialog):
         self.file_path_edit.setReadOnly(True)
         file_selection_layout.addWidget(self.file_path_edit)
         
-        self.browse_button = QPushButton("📁 Обзор...")
+        self.browse_button = QPushButton(" Обзор...")
         self.browse_button.clicked.connect(self.browse_file)
         file_selection_layout.addWidget(self.browse_button)
         
@@ -236,20 +236,20 @@ class ReportConfigDialog(QDialog):
         preview_text = f"""
 ПРЕДВАРИТЕЛЬНЫЙ ПРОСМОТР ОТЧЕТА
 
-ИНФОРМАЦИЯ О ПАЦИЕНТЕ:
-• ФИО: {info['patient_info'].get('name', 'Не указано')}
-• Возраст: {info['patient_info'].get('age', 'Не указан')}
-• Пол: {info['patient_info'].get('gender', 'Не указан')}
-• ID: {info['patient_info'].get('id', 'Не указан')}
-• Дата обследования: {info['patient_info'].get('examination_date', 'Не указана')}
-• Врач: {info['patient_info'].get('doctor', 'Не указан')}
+ИНФОРМАЦИЯ О ПОЛЬЗОВАТЕЛЕ:
+ ФИО: {info['patient_info'].get('name', 'Не указано')}
+ Возраст: {info['patient_info'].get('age', 'Не указан')}
+ Пол: {info['patient_info'].get('gender', 'Не указан')}
+ ID: {info['patient_info'].get('id', 'Не указан')}
+ Дата обследования: {info['patient_info'].get('examination_date', 'Не указана')}
+ Врач: {info['patient_info'].get('doctor', 'Не указан')}
 
 РАЗДЕЛЫ ОТЧЕТА:
-• Исходные сигналы: {'✓' if info['include_raw_signals'] else '✗'}
-• Обработанные сигналы: {'✓' if info['include_processed_signals'] else '✗'}
-• Спектральный анализ: {'✓' if info['include_spectral_analysis'] else '✗'}
-• Анализ ритмов: {'✓' if info['include_rhythm_analysis'] else '✗'}
-• Рекомендации: {'✓' if info['include_recommendations'] else '✗'}
+ Исходные сигналы: {'✓' if info['include_raw_signals'] else '✗'}
+ Обработанные сигналы: {'✓' if info['include_processed_signals'] else '✗'}
+ Спектральный анализ: {'✓' if info['include_spectral_analysis'] else '✗'}
+ Анализ ритмов: {'✓' if info['include_rhythm_analysis'] else '✗'}
+ Рекомендации: {'✓' if info['include_recommendations'] else '✗'}
 
 ФАЙЛ СОХРАНЕНИЯ:
 {info['output_path']}

@@ -1,7 +1,81 @@
 import numpy as np
 
-
 class VisualizationMethods:
+    def _safe_html(self, s):
+        if s is None:
+            return ""
+        return (str(s)
+                .replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace('"', "&quot;"))
+
+    def _html_page(self, title, body_html):
+        return f"""
+        <html><head><meta charset="utf-8">
+        <style>
+          body {{
+            background:#0b1220; color:#e5e7eb;
+            font-family: Helvetica, Arial;
+            font-size:13px; line-height:1.55; margin:0; padding:14px;
+          }}
+          .title {{ font-size:15px; font-weight:900; margin:0 0 12px 0; }}
+          .grid {{ display:block; }}
+          .card {{
+            background:rgba(255,255,255,0.04);
+            border:1px solid #243244;
+            border-radius:12px;
+            padding:12px;
+            margin:10px 0;
+          }}
+          .card h3 {{
+            margin:0 0 8px 0;
+            font-size:12px;
+            font-weight:900;
+            letter-spacing:.4px;
+            color:#cbd5e1;
+            text-transform:uppercase;
+          }}
+          .row {{
+            display:flex; justify-content:space-between; gap:10px;
+            padding:6px 0; border-bottom:1px solid rgba(36,50,68,.55);
+          }}
+          .row:last-child {{ border-bottom:none; }}
+          .k {{ color:#9ca3af; }}
+          .v {{ color:#e5e7eb; font-weight:800; }}
+          .muted {{ color:#94a3b8; }}
+          .badge {{
+            display:inline-block; padding:2px 8px; border-radius:999px;
+            border:1px solid #243244; font-size:11px; font-weight:900;
+            margin-left:6px;
+          }}
+          .ok {{ background:rgba(34,197,94,.14); color:#86efac; }}
+          .warn {{ background:rgba(245,158,11,.14); color:#fcd34d; }}
+          .bad {{ background:rgba(239,68,68,.14); color:#fca5a5; }}
+          .accent {{ background:rgba(59,130,246,.14); color:#93c5fd; }}
+          table {{ width:100%; border-collapse:collapse; margin-top:6px; border-radius:10px; overflow:hidden; }}
+          th,td {{ border:1px solid rgba(36,50,68,.7); padding:8px 10px; text-align:left; }}
+          th {{ background:rgba(255,255,255,.05); color:#cbd5e1; font-weight:900; font-size:12px; }}
+          ul {{ margin:8px 0 0 18px; padding:0; }}
+          li {{ margin:6px 0; }}
+          pre {{
+            margin:0; white-space:pre-wrap; word-break:break-word;
+            color:#cbd5e1;
+            font-family: Menlo, Monaco, "Courier New";
+            font-size:12px;
+          }}
+        </style></head>
+        <body>
+          <div class="title">{self._safe_html(title)}</div>
+          <div class="grid">{body_html}</div>
+        </body></html>
+        """
+
+    def _badge(self, text, level="accent"):
+        cls = "badge " + (
+            "ok" if level == "ok" else "warn" if level == "warn" else "bad" if level == "bad" else "accent")
+        return f'<span class="{cls}">{self._safe_html(text)}</span>'
+
     def _style_axes(self, ax, title=None):
         # Цвета под тёмный фон приложения
         fg = "#E5E7EB"
@@ -279,94 +353,262 @@ class VisualizationMethods:
 
     def update_data_info(self):
         try:
-            info_text = "=== ИНФОРМАЦИЯ О ДАННЫХ ===\n\n"
+            body = ""
+
+            # ---- Исходные данные
             if self.raw_data is not None:
-                info_text += f"ИСХОДНЫЕ ДАННЫЕ:\n• Каналов: {len(self.raw_data)}\n• Образцов: {self.raw_data.shape[1]}\n• Частота дискретизации: {self.sampling_rate} Гц\n• Длительность: {self.raw_data.shape[1] / self.sampling_rate:.2f} сек\n• Каналы: {', '.join(self.channel_names) if self.channel_names else 'Не указаны'}\n\n"
-                for i, channel_name in enumerate(self.channel_names[:min(len(self.channel_names), len(self.raw_data))]):
-                    channel_data = self.raw_data[i]
-                    info_text += f"  {channel_name}:\n    - Среднее: {np.mean(channel_data):.3f} мкВ\n    - СКО: {np.std(channel_data):.3f} мкВ\n    - Мин/Макс: {np.min(channel_data):.3f} / {np.max(channel_data):.3f} мкВ\n"
+                chans = len(self.raw_data)
+                samples = int(self.raw_data.shape[1])
+                fs = float(self.sampling_rate)
+                dur = samples / fs if fs > 0 else 0
+
+                channels_str = ", ".join(self.channel_names) if self.channel_names else "не указаны"
+
+                body += f"""
+                <div class="card">
+                  <h3>Сводка</h3>
+                  <div class="row"><div class="k">Статус</div><div class="v">{self._badge("RAW LOADED", "ok")}</div></div>
+                  <div class="row"><div class="k">Каналов</div><div class="v">{chans}</div></div>
+                  <div class="row"><div class="k">Образцов</div><div class="v">{samples}</div></div>
+                  <div class="row"><div class="k">Частота</div><div class="v">{fs:g} Гц</div></div>
+                  <div class="row"><div class="k">Длительность</div><div class="v">{dur:.2f} сек</div></div>
+                  <div class="row"><div class="k">Каналы</div><div class="v">{self._safe_html(channels_str)}</div></div>
+                </div>
+                """
+
+                # Таблица по каналам (первые N)
+                maxch = min(len(self.raw_data), len(self.channel_names)) if self.channel_names else min(
+                    len(self.raw_data), 8)
+                rows = []
+                for i in range(maxch):
+                    name = self.channel_names[i] if self.channel_names else f"Канал {i}"
+                    ch = self.raw_data[i]
+                    rows.append(f"""
+                      <tr>
+                        <td>{self._safe_html(name)}</td>
+                        <td>{np.mean(ch):.3f}</td>
+                        <td>{np.std(ch):.3f}</td>
+                        <td>{np.min(ch):.3f}</td>
+                        <td>{np.max(ch):.3f}</td>
+                      </tr>
+                    """)
+
+                body += f"""
+                <div class="card">
+                  <h3>Статистика каналов</h3>
+                  <table>
+                    <tr><th>Канал</th><th>Mean</th><th>Std</th><th>Min</th><th>Max</th></tr>
+                    {''.join(rows)}
+                  </table>
+                  <div class="muted" style="margin-top:8px;">Показаны первые {maxch} каналов.</div>
+                </div>
+                """
+            else:
+                body += f"""
+                <div class="card">
+                  <h3>Сводка</h3>
+                  <div class="row"><div class="k">Статус</div><div class="v">{self._badge("RAW EMPTY", "warn")}</div></div>
+                  <div class="muted">Загрузите файл данных, чтобы отобразить информацию.</div>
+                </div>
+                """
+
+            # ---- Обработка
             if self.processed_data is not None:
-                info_text += f"\nОБРАБОТАННЫЕ ДАННЫЕ:\n• Применены фильтры: {self.processing_params['low_freq']}-{self.processing_params['high_freq']} Гц\n• Notch фильтр: {self.processing_params['notch_freq']} Гц\n• Детренд: {'Да' if self.processing_params['detrend'] else 'Нет'}\n• Удаление DC: {'Да' if self.processing_params['remove_dc'] else 'Нет'}\n• Удаление артефактов: {'Да' if self.processing_params['remove_artifacts'] else 'Нет'}\n"
-                if self.processing_params['remove_artifacts']:
-                    info_text += f"• Порог артефактов: {self.processing_params['artifact_threshold']} СКО\n"
+                p = self.processing_params
+                body += f"""
+                <div class="card">
+                  <h3>Обработка</h3>
+                  <div class="row"><div class="k">Фильтр</div><div class="v">{p['low_freq']}-{p['high_freq']} Гц</div></div>
+                  <div class="row"><div class="k">Notch</div><div class="v">{p['notch_freq']} Гц</div></div>
+                  <div class="row"><div class="k">Detrend</div><div class="v">{self._badge("ON", "ok") if p.get("detrend") else self._badge("OFF", "warn")}</div></div>
+                  <div class="row"><div class="k">DC offset</div><div class="v">{self._badge("ON", "ok") if p.get("remove_dc") else self._badge("OFF", "warn")}</div></div>
+                  <div class="row"><div class="k">Artifacts</div><div class="v">{self._badge("ON", "ok") if p.get("remove_artifacts") else self._badge("OFF", "warn")}</div></div>
+                </div>
+                """
+                if p.get("remove_artifacts"):
+                    body += f"""
+                    <div class="card">
+                      <h3>Порог артефактов</h3>
+                      <div class="row"><div class="k">σ</div><div class="v">{p.get("artifact_threshold")}</div></div>
+                    </div>
+                    """
+            else:
+                body += f"""
+                <div class="card">
+                  <h3>Обработка</h3>
+                  <div class="row"><div class="k">Статус</div><div class="v">{self._badge("PROCESSED EMPTY", "warn")}</div></div>
+                  <div class="muted">Обработанные данные ещё не сформированы.</div>
+                </div>
+                """
+
+            # ---- Анализ
             if self.current_analysis is not None:
-                info_text += f"\nАНАЛИЗ РИТМОВ:\n"
-                analysis = self.current_analysis['analysis']
-                channel_idx = self.current_analysis['channel_idx']
-                info_text += f"• Анализируемый канал: {self.channel_names[channel_idx]}\n"
-                if 'rhythm_powers' in analysis:
-                    info_text += f"• Ритмы ЭЭГ:\n"
-                    for rhythm, power in analysis['rhythm_powers'].items():
-                        info_text += f"  - {rhythm}: {power:.6f}\n"
-            if hasattr(self, 'performance_monitor'):
-                perf_summary = self.performance_monitor.get_summary()
-                info_text += f"\n ПРОИЗВОДИТЕЛЬНОСТЬ:\n{perf_summary}\n"
-            self.info_panel.info_text.setPlainText(info_text)
+                analysis = self.current_analysis["analysis"]
+                channel_idx = self.current_analysis["channel_idx"]
+                ch_name = self.channel_names[channel_idx] if self.channel_names else f"Канал {channel_idx}"
+
+                body += f"""
+                <div class="card">
+                  <h3>Анализ</h3>
+                  <div class="row"><div class="k">Канал</div><div class="v">{self._safe_html(ch_name)}</div></div>
+                </div>
+                """
+
+                if "rhythm_powers" in analysis and isinstance(analysis["rhythm_powers"], dict):
+                    items = []
+                    for rhythm, power in analysis["rhythm_powers"].items():
+                        items.append(f"<li><b>{self._safe_html(rhythm)}</b> — {float(power):.6f}</li>")
+                    body += f"""
+                    <div class="card">
+                      <h3>Мощности ритмов</h3>
+                      <ul>{''.join(items)}</ul>
+                    </div>
+                    """
+            else:
+                body += f"""
+                <div class="card">
+                  <h3>Анализ</h3>
+                  <div class="row"><div class="k">Статус</div><div class="v">{self._badge("NO ANALYSIS", "warn")}</div></div>
+                  <div class="muted">Запустите анализ ритмов, чтобы увидеть результат.</div>
+                </div>
+                """
+
+            # ---- Производительность (кратко)
+            if hasattr(self, "performance_monitor"):
+                try:
+                    perf_summary = self.performance_monitor.get_summary()
+                    body += f"""
+                    <div class="card">
+                      <h3>Производительность</h3>
+                      <pre>{self._safe_html(perf_summary)}</pre>
+                    </div>
+                    """
+                except:
+                    pass
+
+            self.info_panel.info_text.setHtml(self._html_page("Информация", body))
+
         except Exception as e:
-            print(f"Ошибка обновления информации: {e}")
+            self.info_panel.info_text.setHtml(self._html_page("Информация",
+                                                              f"<div class='card'><h3>Ошибка</h3><pre>{self._safe_html(e)}</pre></div>"))
 
     def update_recommendations(self):
         if self.current_analysis is None:
             return
         try:
-            analysis = self.current_analysis['analysis']
-            recommendations = self.current_analysis.get('recommendations', {})
-            
-            rec_text = "=== ПЕРСОНАЛЬНЫЕ РЕКОМЕНДАЦИИ ===\n\n"
-            
-            # Если есть рекомендации от анализатора, используем их
-            if recommendations and isinstance(recommendations, dict):
-                # Общее состояние
-                if 'general' in recommendations:
-                    general = recommendations['general']
-                    rec_text += f"ОБЩЕЕ СОСТОЯНИЕ:\n"
-                    rec_text += f"• {general.get('summary', 'Анализ не завершен')}\n"
-                    rec_text += f"• Доминирующий ритм: {general.get('dominant_rhythm', 'не определен').upper()}\n"
-                    rec_text += f"• Уровень расслабления: {general.get('relaxation_level', 'не определен')}\n\n"
-                
-                # Рекомендации по ритмам
-                if 'rhythm_details' in recommendations:
-                    rec_text += "РЕКОМЕНДАЦИИ ПО РИТМАМ:\n\n"
-                    rhythm_names = {
-                        'delta': 'ДЕЛЬТА (0.5-4 Гц)',
-                        'theta': 'ТЕТА (4-8 Гц)', 
-                        'alpha': 'АЛЬФА (8-13 Гц)',
-                        'beta': 'БЕТА (13-30 Гц)',
-                        'gamma': 'ГАММА (30-100 Гц)'
-                    }
-                    
-                    for rhythm, details in recommendations['rhythm_details'].items():
-                        rhythm_display = rhythm_names.get(rhythm, rhythm.upper())
-                        state = details.get('state', 'НЕИЗВЕСТНО')
-                        recommendation = details.get('recommendation', 'Рекомендации отсутствуют')
-                        power = details.get('relative_power', 0)
+            analysis = self.current_analysis["analysis"]
+            recommendations = self.current_analysis.get("recommendations", {})
 
-                        rec_text += f"{rhythm_display}:\n"
-                        rec_text += f"   Состояние: {state} ({power:.1%})\n"
-                        rec_text += f"   {recommendation}\n\n"
+            body = ""
 
-                if 'specific_recommendations' in recommendations:
-                    specific = recommendations['specific_recommendations']
-                    if specific:
-                        rec_text += "СПЕЦИАЛЬНЫЕ РЕКОМЕНДАЦИИ:\n\n"
-                        for i, rec in enumerate(specific, 1):
-                            rec_text += f"{i}. {rec}\n"
-                        rec_text += "\n"
+            # --- Общий блок от анализатора
+            if recommendations and isinstance(recommendations, dict) and "general" in recommendations:
+                g = recommendations["general"]
+                summary = g.get("summary", "—")
+                dom = str(g.get("dominant_rhythm", "—")).upper()
+                relax = g.get("relaxation_level", "—")
 
-            rec_text += self._generate_lifestyle_recommendations(analysis)
+                body += f"""
+                <div class="card">
+                  <h3>Общее состояние</h3>
+                  <div class="row"><div class="k">Итог</div><div class="v">{self._safe_html(summary)}</div></div>
+                  <div class="row"><div class="k">Доминирующий ритм</div><div class="v">{self._badge(dom, "accent")}</div></div>
+                  <div class="row"><div class="k">Расслабление</div><div class="v">{self._safe_html(relax)}</div></div>
+                </div>
+                """
+            else:
+                body += f"""
+                <div class="card">
+                  <h3>Общее состояние</h3>
+                  <div class="muted">Нет структурированных рекомендаций от анализатора — отображены базовые блоки ниже.</div>
+                </div>
+                """
 
-            rec_text += self._generate_medical_alerts(analysis)
-            
-            self.info_panel.recommendations_text.setPlainText(rec_text)
-            
+            # --- Детально по ритмам (карточками)
+            if recommendations and isinstance(recommendations, dict) and "rhythm_details" in recommendations:
+                for rhythm, details in recommendations["rhythm_details"].items():
+                    state = str(details.get("state", "—"))
+                    rec = str(details.get("recommendation", "—"))
+                    p = float(details.get("relative_power", 0))
+
+                    lvl = "accent"
+                    s_low = state.lower()
+                    if "стресс" in s_low or "высок" in s_low:
+                        lvl = "warn"
+                    if "аном" in s_low or "патолог" in s_low:
+                        lvl = "bad"
+
+                    body += f"""
+                    <div class="card">
+                      <h3>{self._safe_html(str(rhythm).upper())}</h3>
+                      <div class="row"><div class="k">Состояние</div><div class="v">{self._badge(state, lvl)} {self._badge(f"{p * 100:.1f}%", "accent")}</div></div>
+                      <div class="muted" style="margin-top:8px;">{self._safe_html(rec)}</div>
+                    </div>
+                    """
+
+            # --- Специальные рекомендации (как чек-лист)
+            if recommendations and isinstance(recommendations, dict) and recommendations.get(
+                    "specific_recommendations"):
+                items = []
+                for rec in recommendations["specific_recommendations"]:
+                    items.append(f"<li>{self._safe_html(rec)}</li>")
+                body += f"""
+                <div class="card">
+                  <h3>Специальные рекомендации</h3>
+                  <ul>{''.join(items)}</ul>
+                </div>
+                """
+
+            # --- Твой lifestyle/text -> конвертим в списки (не простыня)
+            lifestyle_txt = self._generate_lifestyle_recommendations(analysis)
+            lifestyle_lines = [ln.strip() for ln in lifestyle_txt.splitlines() if ln.strip().startswith("•")]
+            if lifestyle_lines:
+                lis = "".join([f"<li>{self._safe_html(ln.replace('•', '').strip())}</li>" for ln in lifestyle_lines])
+                body += f"""
+                <div class="card">
+                  <h3>Образ жизни</h3>
+                  <ul>{lis}</ul>
+                </div>
+                """
+            else:
+                body += f"""
+                <div class="card">
+                  <h3>Образ жизни</h3>
+                  <pre>{self._safe_html(lifestyle_txt)}</pre>
+                </div>
+                """
+
+            # --- Медицинские наблюдения: тоже не простыня
+            med_txt = self._generate_medical_alerts(analysis)
+            med_lines = [ln.strip() for ln in med_txt.splitlines() if ln.strip()]
+            # если есть явные "alerts" — делаем список
+            med_bullets = [ln for ln in med_lines if "—" in ln or "возможно" in ln.lower() or "рекоменду" in ln.lower()]
+            if med_bullets:
+                lis = "".join([f"<li>{self._safe_html(ln)}</li>" for ln in med_bullets])
+                body += f"""
+                <div class="card">
+                  <h3>Медицинские наблюдения</h3>
+                  <ul>{lis}</ul>
+                  <div class="muted" style="margin-top:8px;">Важно: это информационная интерпретация, не диагноз.</div>
+                </div>
+                """
+            else:
+                body += f"""
+                <div class="card">
+                  <h3>Медицинские наблюдения</h3>
+                  <pre>{self._safe_html(med_txt)}</pre>
+                </div>
+                """
+
+            self.info_panel.recommendations_text.setHtml(self._html_page("Рекомендации", body))
+
         except Exception as e:
             print(f"Ошибка обновления рекомендаций: {e}")
-            # Fallback к базовым рекомендациям
             self._show_basic_recommendations()
-    
+
     def _generate_lifestyle_recommendations(self, analysis):
         rec_text = "РЕКОМЕНДАЦИИ ПО ОБРАЗУ ЖИЗНИ:\n\n"
-        
+
         try:
             if 'rhythm_analysis' in analysis:
                 rhythm_analysis = analysis['rhythm_analysis']
@@ -383,13 +625,13 @@ class VisualizationMethods:
                     rec_text += "   • Рекомендуется медитация или дыхательные упражнения\n"
                     rec_text += "   • Избегайте кофеина и стимуляторов\n"
                     rec_text += "   • Практикуйте прогрессивную мышечную релаксацию\n\n"
-                
+
                 elif alpha_power > 0.25:  # Высокая альфа-активность
                     rec_text += "РАССЛАБЛЕНИЕ:\n"
                     rec_text += "   • Отличное состояние для медитации\n"
                     rec_text += "   • Подходящее время для творческой деятельности\n"
                     rec_text += "   • Можно продолжить текущую активность\n\n"
-                
+
                 # Рекомендации по сну
                 if delta_power > 0.25:  # Высокая дельта-активность
                     rec_text += "СОН И ОТДЫХ:\n"
@@ -397,14 +639,14 @@ class VisualizationMethods:
                     rec_text += "   • Рекомендуется короткий сон (20-30 минут)\n"
                     rec_text += "   • Обеспечьте комфортные условия для сна\n"
                     rec_text += "   • Избегайте физических нагрузок\n\n"
-                
+
                 elif delta_power < 0.05:  # Низкая дельта-активность
                     rec_text += "КАЧЕСТВО СНА:\n"
                     rec_text += "   • Возможны проблемы с качеством сна\n"
                     rec_text += "   • Соблюдайте режим сна (7-9 часов)\n"
                     rec_text += "   • Создайте комфортную среду для сна\n"
                     rec_text += "   • Избегайте экранов за 1-2 часа до сна\n\n"
-                
+
                 # Рекомендации по когнитивной активности
                 if gamma_power > 0.15:  # Высокая гамма-активность
                     rec_text += "КОГНИТИВНАЯ НАГРУЗКА:\n"
@@ -412,14 +654,14 @@ class VisualizationMethods:
                     rec_text += "   • Делайте регулярные перерывы (каждые 45-60 минут)\n"
                     rec_text += "   • Пейте достаточно воды\n"
                     rec_text += "   • Избегайте переутомления\n\n"
-                
+
                 elif gamma_power < 0.05:  # Низкая гамма-активность
                     rec_text += "СТИМУЛЯЦИЯ МОЗГА:\n"
                     rec_text += "   • Рекомендуется умственная активность\n"
                     rec_text += "   • Решайте головоломки или читайте\n"
                     rec_text += "   • Изучайте что-то новое\n"
                     rec_text += "   • Занимайтесь физическими упражнениями\n\n"
-                
+
                 # Рекомендации по творчеству
                 if theta_power > 0.15:  # Высокая тета-активность
                     rec_text += "ТВОРЧЕСКАЯ ДЕЯТЕЛЬНОСТЬ:\n"
@@ -427,44 +669,44 @@ class VisualizationMethods:
                     rec_text += "   • Занимайтесь искусством или музыкой\n"
                     rec_text += "   • Практикуйте свободное письмо\n"
                     rec_text += "   • Используйте техники мозгового штурма\n\n"
-                
+
         except Exception as e:
             rec_text += f"Ошибка генерации рекомендаций: {e}\n\n"
-        
+
         return rec_text
-    
+
     def _generate_medical_alerts(self, analysis):
         """Генерация медицинских предупреждений"""
         alert_text = "МЕДИЦИНСКИЕ НАБЛЮДЕНИЯ:\n\n"
-        
+
         try:
             if 'rhythm_analysis' in analysis:
                 rhythm_analysis = analysis['rhythm_analysis']
                 alerts = []
-                
+
                 # Проверка на аномальные паттерны
                 delta_power = rhythm_analysis.get('delta', {}).get('relative_power', 0)
                 theta_power = rhythm_analysis.get('theta', {}).get('relative_power', 0)
                 alpha_power = rhythm_analysis.get('alpha', {}).get('relative_power', 0)
                 beta_power = rhythm_analysis.get('beta', {}).get('relative_power', 0)
-                
+
                 # Предупреждения о возможных состояниях
                 if delta_power > 0.4:
                     alerts.append("Очень высокая дельта-активность - возможно состояние глубокого сна или патология")
-                
+
                 if beta_power > 0.4:
                     alerts.append("Очень высокая бета-активность - возможна тревожность или стресс")
-                
+
                 if alpha_power < 0.05 and beta_power > 0.3:
                     alerts.append("Низкая альфа при высокой бета - признаки стресса или переутомления")
-                
+
                 if theta_power > 0.3 and delta_power < 0.1:
                     alerts.append("Высокая тета при низкой дельта - возможна сонливость в бодрствующем состоянии")
-                
+
                 # Проверка на спайки (если есть данные)
                 if 'spike_count' in analysis and analysis['spike_count'] > 10:
                     alerts.append("Обнаружено повышенное количество спайков - рекомендуется консультация специалиста")
-                
+
                 if alerts:
                     for alert in alerts:
                         alert_text += f"{alert}\n\n"
@@ -473,44 +715,81 @@ class VisualizationMethods:
                 else:
                     alert_text += "Значительных отклонений не обнаружено.\n"
                     alert_text += "Показатели находятся в пределах нормальных значений.\n\n"
-                    
+
         except Exception as e:
             alert_text += f"Ошибка анализа медицинских данных: {e}\n\n"
-        
+
         return alert_text
-    
+
     def _show_basic_recommendations(self):
-        """Показать базовые рекомендации в случае ошибки"""
-        rec_text = "=== БАЗОВЫЕ РЕКОМЕНДАЦИИ ===\n\n"
-        rec_text += "ОБЩИЕ РЕКОМЕНДАЦИИ:\n\n"
-        rec_text += "• Проверьте качество сигнала перед анализом\n"
-        rec_text += "• Убедитесь в правильности настроек фильтров\n"
-        rec_text += "• Сравните результаты с нормативными значениями\n"
-        rec_text += "• При необходимости проведите валидацию с MNE-Python\n"
-        rec_text += "• Сохраните отчет для дальнейшего анализа\n\n"
-        rec_text += "ИНТЕРПРЕТАЦИЯ РИТМОВ:\n\n"
-        rec_text += "• Дельта (0.5-4 Гц): Глубокий сон, патологические состояния\n"
-        rec_text += "• Тета (4-8 Гц): Сонливость, медитация, творческие процессы\n"
-        rec_text += "• Альфа (8-13 Гц): Расслабленное бодрствование, закрытые глаза\n"
-        rec_text += "• Бета (13-30 Гц): Активное мышление, концентрация\n"
-        rec_text += "• Гамма (30-100 Гц): Высокая когнитивная активность\n"
-        
-        self.info_panel.recommendations_text.setPlainText(rec_text)
+        body = """
+        <div class="card">
+          <h3>Базовые рекомендации</h3>
+          <ul>
+            <li>Проверьте качество сигнала перед анализом</li>
+            <li>Убедитесь в корректности настроек фильтров</li>
+            <li>Сравните результаты с нормативными диапазонами</li>
+            <li>При необходимости проверьте расчёты через MNE-Python</li>
+            <li>Сохраните отчёт для последующего сравнения</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Подсказка по ритмам</h3>
+          <table>
+            <tr><th>Ритм</th><th>Диапазон</th><th>Обычно связан с</th></tr>
+            <tr><td>Дельта</td><td>0.5–4 Гц</td><td>Глубокий сон</td></tr>
+            <tr><td>Тета</td><td>4–8 Гц</td><td>Сонливость / медитация</td></tr>
+            <tr><td>Альфа</td><td>8–13 Гц</td><td>Расслабление</td></tr>
+            <tr><td>Бета</td><td>13–30 Гц</td><td>Концентрация / стресс</td></tr>
+            <tr><td>Гамма</td><td>30–100 Гц</td><td>Высокая когнитивная активность</td></tr>
+          </table>
+        </div>
+        """
+        self.info_panel.recommendations_text.setHtml(self._html_page("Рекомендации", body))
 
     def update_performance_display(self):
         try:
-            # Используем специальный отчет по анализу ритмов вместо общего
-            rhythm_report = self.performance_monitor.get_rhythm_analysis_report()
-            self.info_panel.performance_text.setPlainText(rhythm_report)
+            report = self.performance_monitor.get_rhythm_analysis_report()
+            body = f"""
+            <div class="card">
+              <h3>Мониторинг</h3>
+              <div class="row"><div class="k">Источник</div><div class="v">{self._badge("Rhythm report", "ok")}</div></div>
+            </div>
+            <div class="card">
+              <h3>Отчёт</h3>
+              <pre>{self._safe_html(report)}</pre>
+            </div>
+            """
+            self.info_panel.performance_text.setHtml(self._html_page("Мониторинг", body))
         except Exception as e:
             print(f"Ошибка обновления производительности: {e}")
-            # Fallback к общему отчету в случае ошибки
             try:
                 summary = self.performance_monitor.get_summary()
-                self.info_panel.performance_text.setPlainText(summary)
+                body = f"""
+                <div class="card">
+                  <h3>Мониторинг</h3>
+                  <div class="row"><div class="k">Источник</div><div class="v">{self._badge("Summary", "warn")}</div></div>
+                </div>
+                <div class="card">
+                  <h3>Сводка</h3>
+                  <pre>{self._safe_html(summary)}</pre>
+                </div>
+                """
+                self.info_panel.performance_text.setHtml(self._html_page("Мониторинг", body))
             except:
-                self.info_panel.performance_text.setPlainText("Ошибка получения отчета о производительности")
+                self.info_panel.performance_text.setHtml(self._html_page("Мониторинг",
+                                                                         "<div class='card'><h3>Ошибка</h3><div class='muted'>Не удалось получить отчёт.</div></div>"))
 
     def show_performance_report(self, report):
-        self.info_panel.performance_text.setPlainText(report)
+        body = f"""
+        <div class="card">
+          <h3>Экспорт / отчёт</h3>
+          <div class="muted">Ниже отображается сформированный текст отчёта в “моноширинном” виде.</div>
+        </div>
+        <div class="card">
+          <h3>Текст отчёта</h3>
+          <pre>{self._safe_html(report)}</pre>
+        </div>
+        """
+        self.info_panel.performance_text.setHtml(self._html_page("Отчёт", body))
         self.info_panel.info_tabs.setCurrentWidget(self.info_panel.performance_text)

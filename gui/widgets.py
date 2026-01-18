@@ -182,28 +182,28 @@ class ScrollablePlotWidget(QWidget):
         scroll_area.setMinimumSize(400, 500)
 
         # темный стиль скролла (чтобы не вылезал светлый прямоугольник)
-        scroll_area.setStyleSheet("""
-            QScrollArea {
-                background: #0b1020;
-                border: 1px solid rgba(255,255,255,0.08);
-                border-radius: 14px;
-            }
-            QScrollBar:vertical, QScrollBar:horizontal {
-                background: transparent;
-                width: 10px;
-                height: 10px;
-                margin: 2px;
-            }
-            QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-                background: rgba(255,255,255,0.18);
-                border-radius: 6px;
-                min-height: 30px;
-                min-width: 30px;
-            }
-            QScrollBar::handle:hover { background: rgba(255,255,255,0.26); }
-            QScrollBar::add-line, QScrollBar::sub-line { height: 0px; width: 0px; }
-            QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
-        """)
+        # scroll_area.setStyleSheet("""
+        #     QScrollArea {
+        #         background: #0b1020;
+        #         border: 1px solid rgba(255,255,255,0.08);
+        #         border-radius: 14px;
+        #     }
+        #     QScrollBar:vertical, QScrollBar:horizontal {
+        #         background: transparent;
+        #         width: 10px;
+        #         height: 10px;
+        #         margin: 2px;
+        #     }
+        #     QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+        #         background: rgba(255,255,255,0.18);
+        #         border-radius: 6px;
+        #         min-height: 30px;
+        #         min-width: 30px;
+        #     }
+        #     QScrollBar::handle:hover { background: rgba(255,255,255,0.26); }
+        #     QScrollBar::add-line, QScrollBar::sub-line { height: 0px; width: 0px; }
+        #     QScrollBar::add-page, QScrollBar::sub-page { background: transparent; }
+        # """)
 
         layout.addWidget(scroll_area)
         self.setLayout(layout)

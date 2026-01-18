@@ -28,6 +28,7 @@ _CYAN = "#06b6d4"
 _DANGER = "#ef4444"
 
 
+
 def _card(title: str = "", subtitle: str = "") -> QGroupBox:
     box = QGroupBox(title)
     box.setProperty("card", True)
@@ -50,8 +51,12 @@ def _apply_spin_clean(spin):
 def _base_stylesheet() -> str:
     return f"""
     QWidget {{
-        color: {_TEXT};
+        font-family: "Helvetica Neue", Helvetica, Arial;
+        color: #e5e7eb;
         font-size: 13px;
+    }}
+    QMainWindow, QWidget#centralWidget, QWidget#MainWindow, QWidget#root, QWidget {{
+        background-color: {_APP_BG};
     }}
 
     /* Cards */
@@ -103,6 +108,60 @@ def _base_stylesheet() -> str:
         width: 0px;
         height: 0px;
     }}
+    /* ===== ComboBox dropdown (popup list) ===== */
+    QComboBox QAbstractItemView {{
+        background: #0b1220;
+        color: #E5E7EB;
+
+        border: 1px solid rgba(36,50,68,0.9);
+        border-radius: 12px;
+
+        padding: 6px;
+
+        outline: 0;
+        selection-background-color: rgba(59,130,246,0.25);
+        selection-color: #E5E7EB;
+    }}
+
+    QComboBox QAbstractItemView::item {{
+        padding: 10px 12px;
+        margin: 2px 4px;
+        border-radius: 10px;
+    }}
+
+    QComboBox QAbstractItemView::item:selected {{
+        background: rgba(59,130,246,0.22);
+        color: #E5E7EB;
+    }}
+
+    QComboBox QAbstractItemView {{
+        show-decoration-selected: 1;
+    }}
+
+    /* ===== Scrollbar внутри dropdown тоже в тему ===== */
+    QComboBox QAbstractItemView QScrollBar:vertical {{
+        width: 14px;
+        background: transparent;
+        margin: 6px 4px 6px 4px;
+    }}
+    QComboBox QAbstractItemView QScrollBar::handle:vertical {{
+        background: rgba(229,231,235,0.26);
+        border-radius: 7px;
+        border: 2px solid transparent;
+        background-clip: padding;
+        min-height: 28px;
+    }}
+    QComboBox QAbstractItemView QScrollBar::handle:vertical:hover {{
+        background: rgba(229,231,235,0.38);
+    }}
+    QComboBox QAbstractItemView QScrollBar::add-line:vertical,
+    QComboBox QAbstractItemView QScrollBar::sub-line:vertical {{
+        height: 0px;
+    }}
+    QComboBox QAbstractItemView QScrollBar::add-page:vertical,
+    QComboBox QAbstractItemView QScrollBar::sub-page:vertical {{
+        background: transparent;
+    }}
 
     /* Spinbox: no arrows and clean padding */
     QSpinBox, QDoubleSpinBox {{
@@ -117,21 +176,36 @@ def _base_stylesheet() -> str:
 
     /* Checkboxes */
     QCheckBox {{
-        spacing: 10px;
+        background: transparent;
+        border: none;
         padding: 6px 6px;
+        margin: 0px;
+        spacing: 10px;
         color: #e5e7eb;
-        font-weight: 600;
+        font-weight: 700;
     }}
+    
+    QCheckBox:hover {{
+        background: rgba(255,255,255,0.04);
+        border-radius: 10px;
+    }}
+    
     QCheckBox::indicator {{
-        width: 16px;
-        height: 16px;
-        border-radius: 4px;
+        width: 18px;
+        height: 18px;
+        border-radius: 6px;
         border: 1px solid {_BORDER};
         background: #0b1220;
     }}
+    
     QCheckBox::indicator:checked {{
         background: {_ACCENT};
         border: 1px solid {_ACCENT};
+    }}
+    
+    QCheckBox::indicator:checked:hover {{
+        background: #2563eb;
+        border: 1px solid #2563eb;
     }}
 
     /* Buttons */
@@ -240,10 +314,82 @@ def _base_stylesheet() -> str:
 
     /* GroupBoxes not marked as card */
     QGroupBox {{
-        border: 1px solid {_BORDER};
-        border-radius: 10px;
+        border: none;
+        background: transparent;
         margin-top: 10px;
         padding: 10px;
+    }}
+    
+    /* ===== Scrollbars (тонкие, капсула, без стрелок) ===== */
+    /* VERTICAL */
+    QScrollBar:vertical {{
+        width: 17px;                 /* было 16 -> +1px */
+        background: transparent;
+        margin: 4px 4px 6px 4px;     /* отступы самого скроллбара */
+    }}
+    
+    QScrollBar::handle:vertical {{
+        background: rgba(229,231,235,0.30);
+        border-radius: 999px;        /* капсула */
+        min-height: 34px;
+    
+        /* ключ: создаём внутренний отступ, чтобы торцы были круглыми */
+        border: 3px solid transparent;
+        background-clip: padding;
+    
+        /* ключ: ручка не должна упираться в края */
+        margin: 2px 3px 2px 3px;     /* top right bottom left */
+    }}
+    
+    QScrollBar::handle:vertical:hover {{
+        background: rgba(229,231,235,0.44);
+    }}
+    
+    QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {{
+        height: 0px;
+        background: transparent;
+        border: none;
+    }}
+    
+    QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+        background: transparent;
+    }}
+    
+    
+    /* HORIZONTAL */
+    QScrollBar:horizontal {{
+        height: 15px;                /* можно тоже чуть подправить */
+        background: transparent;
+        margin: 4px 6px 4px 6px;
+    }}
+    
+    QScrollBar::handle:horizontal {{
+        background: rgba(229,231,235,0.30);
+        border-radius: 999px;
+        min-width: 34px;
+    
+        border: 3px solid transparent;
+        background-clip: padding;
+    
+        margin: 3px 2px 3px 2px;
+    }}
+    
+    QScrollBar::handle:horizontal:hover {{
+        background: rgba(229,231,235,0.44);
+    }}
+    
+    QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {{
+        width: 0px;
+        background: transparent;
+        border: none;
+    }}
+    
+    QScrollBar::add-page:horizontal, QScrollBar::sub-page:horizontal {{
+        background: transparent;
+    }}
+        QFrame {{
+        border: none;
+        background: transparent;
     }}
     """
 
@@ -286,7 +432,7 @@ class TopControlPanel(QWidget):
         # Left actions
         left = QVBoxLayout()
         left.setSpacing(6)
-        title = QLabel("EEG Analyzer • Data Workspace")
+        title = QLabel("Анализ ЭЭГ")
         title.setStyleSheet("font-size: 14px; font-weight: 800;")
         subtitle = QLabel("Загрузка файлов и выбор режима визуализации")
         subtitle.setObjectName("muted")
@@ -426,7 +572,7 @@ class ProcessingPanel(QWidget):
         go.addWidget(self.remove_dc_check)
         go.addWidget(self.artifacts_check)
 
-        hint = QLabel("Совет: сначала HPF/LPF, потом DC/Detrend, затем артефакты.")
+        hint = QLabel("Совет: сначала HPF/LPF, потом Detrend/DC, затем артефакты.")
         hint.setObjectName("muted")
         hint.setWordWrap(True)
         go.addWidget(hint)
@@ -593,7 +739,7 @@ class RecordingSettingsPanel(QWidget):
 
         settings_layout.addWidget(head("Источник данных"), 0, 0)
         self.data_source_combo = QComboBox()
-        self.data_source_combo.addItems(["Serial порт (Arduino/EEG)", "Синтетические данные (тест)"])
+        self.data_source_combo.addItems(["Serial порт (Arduino/EEG)"])
         settings_layout.addWidget(self.data_source_combo, 1, 0, 1, 2)
 
         settings_layout.addWidget(head("COM порт"), 2, 0)
@@ -683,8 +829,12 @@ class InfoPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         self.info_tabs = QTabWidget()
+        self.info_tabs.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
 
         self.info_text = QTextEdit()
+        self.info_text.setMinimumHeight(520)
+        self.info_text.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.info_text.setPlaceholderText("Системные сообщения, статус загрузки и параметры данных…")
         self.info_text.setStyleSheet("""
             QTextEdit {

@@ -151,12 +151,12 @@ class EEGDataLoader:
 
         return corrected_data
 
-    def generate_test_data(self, duration=10, sampling_rate=250, n_channels=8):
+    def generate_test_data(self, duration=10, sampling_rate=250, n_channels=10):
         n_samples = int(duration * sampling_rate)
         time = np.linspace(0, duration, n_samples)
 
         data = np.zeros((n_channels, n_samples))
-        channel_names = [f'EEG_{i:03d}' for i in range(n_channels)]
+        channel_names = [f'тест_{i:02d}' for i in range(n_channels)]
 
         # Генерация разных ритмов
         rhythms = [
@@ -167,33 +167,45 @@ class EEGDataLoader:
             (30, 100, 20),  # Gamma
             (2, 30, 35),  # Mixed
             (8, 12, 55),  # Alpha
-            (15, 25, 25)  # Beta
+            (15, 25, 25),  # Beta
+            (1, 3, 45),  # Slow delta-ish
+            (10, 18, 28)  # Alpha/Beta mix
         ]
 
         for i in range(n_channels):
             low_freq, high_freq, amplitude = rhythms[i % len(rhythms)]
 
-            # Случайная центральная частота в диапазоне
             center_freq = np.random.uniform(low_freq, high_freq)
 
-            # Основной ритм
-            main_signal = amplitude * np.sin(2 * np.pi * center_freq * time)
+            phase = np.random.uniform(0, 2 * np.pi)
 
-            # Добавляем гармоники
+            mod_freq = np.random.uniform(0.05, 0.25)  # 0.05–0.25 Гц
+            mod_depth = np.random.uniform(0.15, 0.45)  # глубина модуляции
+            amp_envelope = 1.0 + mod_depth * np.sin(2 * np.pi * mod_freq * time + phase)
+
+            # Основной ритм
+            main_signal = (amplitude * amp_envelope) * np.sin(
+                2 * np.pi * center_freq * time + phase)  # +phase и envelope
+
+            # Гармоники
             for harmonic in range(2, 4):
                 if center_freq * harmonic <= high_freq:
                     harmonic_amp = amplitude / harmonic
-                    main_signal += harmonic_amp * np.sin(2 * np.pi * center_freq * harmonic * time)
+                    main_signal += (harmonic_amp * 0.7) * np.sin(
+                        2 * np.pi * center_freq * harmonic * time + phase / 2)  # чуть тише + фаза
 
-            # Шум
-            noise = 5 * np.random.normal(0, 1, n_samples)
+            # шум разный по каналам
+            noise_std = np.random.uniform(4.0, 9.0)
+            noise = noise_std * np.random.normal(0, 1, n_samples)
 
-            # Случайные артефакты
+            # Артефакты (оставляем, но сделаем шире по времени, чтобы не были "один сэмпл")
             artifacts = np.zeros(n_samples)
-            if i % 3 == 0:  # Добавляем артефакты в некоторые каналы
+            if i % 3 == 0:
                 n_artifacts = np.random.randint(2, 6)
                 artifact_times = np.random.randint(0, n_samples, n_artifacts)
-                artifacts[artifact_times] = 80 * np.random.randn(n_artifacts)
+                for t0 in artifact_times:  # маленький "блип" 3–10 сэмплов
+                    w = np.random.randint(3, 10)
+                    artifacts[t0:min(n_samples, t0 + w)] += 80 * np.random.randn()
 
             data[i, :] = main_signal + noise + artifacts
 

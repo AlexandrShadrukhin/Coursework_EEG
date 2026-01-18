@@ -200,7 +200,6 @@ class PerformanceMonitor:
             return "Анализ ритмов не проводился"
 
         summary = []
-        summary.append("=== ОТЧЕТ ПО АНАЛИЗУ РИТМОВ ===")
         summary.append("")
 
         # Фильтруем только операции анализа ритмов

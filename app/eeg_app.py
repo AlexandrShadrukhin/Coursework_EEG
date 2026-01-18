@@ -76,7 +76,7 @@ class EEGAnalyzerApp(QMainWindow, ProcessingMethods, RealtimeMethods, Visualizat
         }
 
     def initUI(self):
-        self.setWindowTitle("EEG Analyzer")
+        self.setWindowTitle("Coursework EEG")
         self.setGeometry(50, 50, 1600, 900)
 
         self.menu_bar = EEGMenuBar(self)
@@ -309,7 +309,7 @@ class EEGAnalyzerApp(QMainWindow, ProcessingMethods, RealtimeMethods, Visualizat
             geometry = [50, 50, 1600, 900]
             self.setGeometry(*geometry)
 
-            self.processing_params.update({'low_freq': 1.0, 'high_freq': 40.0, 'notch_freq': 50.0})
+            self.processing_params.update({'low_freq': 1.0, 'high_freq': 40.0, 'notch_freq': 50})
             self.processing_panel.low_freq_spin.setValue(self.processing_params['low_freq'])
             self.processing_panel.high_freq_spin.setValue(self.processing_params['high_freq'])
             self.processing_panel.notch_freq_spin.setValue(self.processing_params['notch_freq'])
