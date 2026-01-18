@@ -6,7 +6,7 @@ from PyQt5.QtCore import QThread, pyqtSignal, Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QTextEdit,
                              QPushButton, QTabWidget, QWidget, QTableWidget,
-                             QTableWidgetItem, QLabel, QProgressBar, QHeaderView, QAbstractItemView)
+                             QTableWidgetItem, QLabel, QProgressBar, QHeaderView, QAbstractItemView, QScrollArea)
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.figure import Figure
 
@@ -352,11 +352,24 @@ class ValidationDialog(QDialog):
 
         # Таб с графиками
         self.plot_tab = QWidget()
-        plot_layout = QVBoxLayout()
+        plot_layout = QVBoxLayout(self.plot_tab)
+        plot_layout.setContentsMargins(0, 0, 0, 0)
+
         self.figure = Figure(figsize=(10, 8))
         self.canvas = FigureCanvas(self.figure)
-        plot_layout.addWidget(self.canvas)
-        self.plot_tab.setLayout(plot_layout)
+        self.canvas.setFocusPolicy(Qt.NoFocus)
+
+        self.plot_scroll = QScrollArea()
+        self.plot_scroll.setWidgetResizable(False)
+        self.plot_scroll.setFrameShape(QScrollArea.NoFrame)  # чтобы не было лишней рамки
+
+        self.plot_container = QWidget()
+        plot_container_layout = QVBoxLayout(self.plot_container)
+        plot_container_layout.setContentsMargins(0, 0, 0, 0)
+        plot_container_layout.addWidget(self.canvas)
+
+        self.plot_scroll.setWidget(self.plot_container)
+        plot_layout.addWidget(self.plot_scroll)
 
         self.tabs.addTab(self.report_tab, " Отчёт")
         self.tabs.addTab(self.table_tab, " Таблица")
@@ -480,8 +493,12 @@ class ValidationDialog(QDialog):
         our_data = result['our_data']
         mne_data = result['mne_data']
 
-        n_channels = min(4, our_data.shape[0])
+        n_channels = our_data.shape[0]  # рисуем все каналы
         time_axis = np.arange(our_data.shape[1]) / self.sampling_rate
+
+        # чтобы сабплоты не сжимались — увеличиваем высоту под число каналов
+        self.figure.set_size_inches(12, max(3, 2.0 * n_channels))
+        self.figure.set_dpi(100)
 
         for i in range(n_channels):
             ax = self.figure.add_subplot(n_channels, 1, i + 1)
@@ -504,6 +521,12 @@ class ValidationDialog(QDialog):
         self.figure.tight_layout()
         self._apply_dark_matplotlib()
         self.canvas.draw()
+        # заставляем Qt реально дать canvas большой размер -> появляется скролл
+        w_px = int(self.figure.get_figwidth() * self.figure.dpi)
+        h_px = int(self.figure.get_figheight() * self.figure.dpi)
+
+        self.canvas.setFixedSize(w_px, h_px)
+        self.plot_container.setFixedSize(w_px, h_px)
 
     def save_report(self):
         """Сохранение отчёта"""
